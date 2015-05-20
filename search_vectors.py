@@ -11,8 +11,10 @@ import pickle
 if __name__ == '__main__':
   if len(sys.argv) >= 2:
     vector_label = unicode(sys.argv[1], "utf-8")
-    num_topics_lsa = int(sys.argv[2]) if len(sys.argv) >= 4 else 100
-    num_topics_lda = int(sys.argv[3]) if len(sys.argv) >= 5 else 100
+    num_topics_lsa = int(sys.argv[2]) if len(sys.argv) >= 3 else 100
+    num_topics_lda = int(sys.argv[3]) if len(sys.argv) >= 4 else 100
+    limit = int(sys.argv[4]) if len(sys.argv) >= 5 else 10
+    limit_topics = int(sys.argv[5]) if len(sys.argv) >= 6 else 10
 
     lsa_model = models.lsimodel.LsiModel.load('/tmp/lsa_model_' + str(num_topics_lsa) + '.lsa')
     lda_model = models.ldamodel.LdaModel.load('/tmp/lda_model_' + str(num_topics_lda) + '.lda')
@@ -46,13 +48,34 @@ if __name__ == '__main__':
 
     print "LSA rank:"
     sims_lsa = lsa_index[ lsa_model[vector_tfidf] ]
-    for i in sorted(enumerate(sims_lsa), key=lambda item: -item[1])[:10]:
-      print labels[i[0]], " : ", i[1]
 
+    topics_set = {}
+    for i in sorted(enumerate(sims_lsa), key=lambda item: -item[1])[:limit]:
+      topics = [item[0] for item in sorted( lsa_model[tfidf[documents[i[0]]]], key = lambda item: -item[1])[:limit_topics] ]
+      for topic in topics:
+        if topic not in topics_set:
+          topics_set[topic] = 1.
+        else:
+          topics_set[topic] += 1.
+      print labels[i[0]], " : ", i[1], " : topics:", topics
+    print "Top topics:"
+    for i in sorted(topics_set.iteritems(), key=lambda x:-x[1])[:limit_topics]:
+      print "topic[", i[0], "] = ", lsa_model.print_topic(i[0])
+
+    topics_set = {}
     print "LDA rank:"
     sims_lda = lda_index[ lda_model[vector_tfidf] ]
-    for i in sorted(enumerate(sims_lda), key=lambda item: -item[1])[:10]:
-      print labels[i[0]], " : ", i[1]
+    for i in sorted(enumerate(sims_lda), key=lambda item: -item[1])[:limit]:
+      topics = [item[0] for item in sorted( lda_model[tfidf[documents[i[0]]]], key = lambda item: -item[1])[:limit_topics] ]
+      for topic in topics:
+        if topic not in topics_set:
+          topics_set[topic] = 1.
+        else:
+          topics_set[topic] += 1.
+      print labels[i[0]], " : ", i[1], " : topics:", topics
+    print "Top topics:"
+    for i in sorted(topics_set.iteritems(), key=lambda x:-x[1])[:limit_topics]:
+      print "topic[", i[0], "] = ", lda_model.print_topic(i[0])
 
   else:
     print("python -m search_vectors [vector_label] [number of topics for lsa=100] [number of topics for lda=100]")
